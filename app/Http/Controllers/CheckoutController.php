@@ -13,6 +13,7 @@ use App\Http\Controllers\ClubPointController;
 use App\Http\Controllers\StripePaymentController;
 use App\Http\Controllers\PublicSslCommerzPaymentController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\fawaterk;
 use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\PaytmController;
 use App\Order;
@@ -38,13 +39,13 @@ class CheckoutController extends Controller
     {
         if ($request->payment_option != null) {
             if (\App\Addon::where('unique_identifier', 'otp_system')->first() != null &&
-                    \App\Addon::where('unique_identifier', 'otp_system')->first()->activated &&
-                    !Auth::user()->email) {
+                \App\Addon::where('unique_identifier', 'otp_system')->first()->activated &&
+                !Auth::user()->email) {
                 flash(translate('Your email should be verified before order'))->warning();
                 return redirect()->route('cart')->send();
             }
 
-            if(get_setting('email_verification') == 1 && !Auth::user()->hasVerifiedEmail()) {
+            if (get_setting('email_verification') == 1 && !Auth::user()->hasVerifiedEmail()) {
                 flash(translate('Your email should be verified before order'))->warning();
                 return redirect()->route('cart')->send();
             }
@@ -58,6 +59,11 @@ class CheckoutController extends Controller
                 if ($request->payment_option == 'paypal') {
                     $paypal = new PaypalController;
                     return $paypal->getCheckout();
+                } elseif ($request->payment_option == 'FAWATERAK') {
+
+                    $fawaterkObject = new fawaterk;
+                    return $fawaterkObject->init($request);
+
                 } elseif ($request->payment_option == 'stripe') {
                     $stripe = new StripePaymentController;
                     return $stripe->stripe();
@@ -73,7 +79,7 @@ class CheckoutController extends Controller
                 } elseif ($request->payment_option == 'proxypay') {
                     $proxy = new ProxypayController;
                     return $proxy->create_reference($request);
-                }  elseif ($request->payment_option == 'paystack') {
+                } elseif ($request->payment_option == 'paystack') {
                     $paystack = new PaystackController;
                     return $paystack->redirectToGateway($request);
                 } elseif ($request->payment_option == 'voguepay') {
@@ -111,8 +117,7 @@ class CheckoutController extends Controller
                 } else if ($request->payment_option == 'bkash') {
                     $bkash = new BkashController;
                     return $bkash->pay();
-                }
-                 else if ($request->payment_option == 'flutterwave') {
+                } else if ($request->payment_option == 'flutterwave') {
                     $flutterwave = new FlutterwaveController();
                     return $flutterwave->pay();
                 } else if ($request->payment_option == 'mpesa') {
@@ -173,13 +178,13 @@ class CheckoutController extends Controller
         }
 
         $vendor_commission_activation = true;
-        if(\App\Addon::where('unique_identifier', 'seller_subscription')->first() != null
+        if (\App\Addon::where('unique_identifier', 'seller_subscription')->first() != null
             && \App\Addon::where('unique_identifier', 'seller_subscription')->first()->activated
-                && !get_setting('vendor_commission_activation')){
-                    $vendor_commission_activation = false;
+            && !get_setting('vendor_commission_activation')) {
+            $vendor_commission_activation = false;
         }
 
-        if($vendor_commission_activation){
+        if ($vendor_commission_activation) {
             foreach ($order->orderDetails as $key => $orderDetail) {
                 $orderDetail->payment_status = 'paid';
                 $orderDetail->save();
@@ -193,7 +198,7 @@ class CheckoutController extends Controller
 
                 if ($orderDetail->product->user->user_type == 'seller') {
                     $seller = $orderDetail->product->user->seller;
-                    $admin_commission = ($orderDetail->price * $commission_percentage)/100;
+                    $admin_commission = ($orderDetail->price * $commission_percentage) / 100;
 
                     if (get_setting('product_manage_by_admin') == 1) {
                         $seller_earning = ($orderDetail->tax + $orderDetail->price) - $admin_commission;
@@ -214,8 +219,7 @@ class CheckoutController extends Controller
                     $commission_history->save();
                 }
             }
-        }
-        else{
+        } else {
             foreach ($order->orderDetails as $key => $orderDetail) {
                 $orderDetail->payment_status = 'paid';
                 $orderDetail->save();
@@ -231,8 +235,8 @@ class CheckoutController extends Controller
         $order->save();
 
         Cart::where('owner_id', $order->seller_id)
-                ->where('user_id', $order->user_id)
-                ->delete();
+            ->where('user_id', $order->user_id)
+            ->delete();
 
         Session::forget('club_point');
 
@@ -274,8 +278,8 @@ class CheckoutController extends Controller
     public function store_delivery_info(Request $request)
     {
         $carts = Cart::where('user_id', Auth::user()->id)
-                ->where('owner_id', $request->owner_id)
-                ->get();
+            ->where('owner_id', $request->owner_id)
+            ->get();
         $shipping_info = Address::where('id', $carts[0]['address_id'])->first();
         $total = 0;
         $tax = 0;
@@ -299,10 +303,10 @@ class CheckoutController extends Controller
                     $cartItem['shipping_cost'] = getShippingCost($carts, $key);
                 }
 
-                if(isset($cartItem['shipping_cost']) && is_array(json_decode($cartItem['shipping_cost'], true))) {
+                if (isset($cartItem['shipping_cost']) && is_array(json_decode($cartItem['shipping_cost'], true))) {
 
-                    foreach(json_decode($cartItem['shipping_cost'], true) as $shipping_region => $val) {
-                        if($shipping_info['city'] == $shipping_region) {
+                    foreach (json_decode($cartItem['shipping_cost'], true) as $shipping_region => $val) {
+                        if ($shipping_info['city'] == $shipping_region) {
                             $cartItem['shipping_cost'] = (double)($val);
                             break;
                         } else {
@@ -311,15 +315,15 @@ class CheckoutController extends Controller
                     }
                 } else {
                     if (!$cartItem['shipping_cost'] ||
-                            $cartItem['shipping_cost'] == null ||
-                            $cartItem['shipping_cost'] == 'null') {
+                        $cartItem['shipping_cost'] == null ||
+                        $cartItem['shipping_cost'] == 'null') {
 
                         $cartItem['shipping_cost'] = 0;
                     }
                 }
 
-                if($product->is_quantity_multiplied == 1 && get_setting('shipping_type') == 'product_wise_shipping') {
-                    $cartItem['shipping_cost'] =  $cartItem['shipping_cost'] * $cartItem['quantity'];
+                if ($product->is_quantity_multiplied == 1 && get_setting('shipping_type') == 'product_wise_shipping') {
+                    $cartItem['shipping_cost'] = $cartItem['shipping_cost'] * $cartItem['quantity'];
                 }
 
                 $shipping += $cartItem['shipping_cost'];
@@ -389,8 +393,8 @@ class CheckoutController extends Controller
     {
         $coupon = Coupon::where('code', $request->code)->first();
         $carts = Cart::where('user_id', Auth::user()->id)
-                ->where('owner_id', $request->owner_id)
-                ->get();
+            ->where('owner_id', $request->owner_id)
+            ->get();
         $response_message = array();
 
         if ($coupon != null) {
@@ -436,14 +440,14 @@ class CheckoutController extends Controller
                     }
 
                     Cart::where('user_id', Auth::user()->id)
-                            ->where('owner_id', $request->owner_id)
-                            ->update(
-                                    [
-                                        'discount' => $coupon_discount / count($carts),
-                                        'coupon_code' => $request->code,
-                                        'coupon_applied' => 1
-                                    ]
-                    );
+                        ->where('owner_id', $request->owner_id)
+                        ->update(
+                            [
+                                'discount' => $coupon_discount / count($carts),
+                                'coupon_code' => $request->code,
+                                'coupon_applied' => 1
+                            ]
+                        );
 
                     $response_message['response'] = 'success';
                     $response_message['message'] = translate('Coupon has been applied');
@@ -465,31 +469,31 @@ class CheckoutController extends Controller
         }
 
         $carts = Cart::where('user_id', Auth::user()->id)
-                ->where('owner_id', $request->owner_id)
-                ->get();
+            ->where('owner_id', $request->owner_id)
+            ->get();
         $shipping_info = Address::where('id', $carts[0]['address_id'])->first();
 
         $returnHTML = view('frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info'))->render();
-        return response()->json(array('response_message' => $response_message, 'html'=>$returnHTML));
+        return response()->json(array('response_message' => $response_message, 'html' => $returnHTML));
 //        return view('frontend.partials.cart_summary', compact('coupon', 'carts', 'shipping_info', 'response_message'));
     }
 
     public function remove_coupon_code(Request $request)
     {
         Cart::where('user_id', Auth::user()->id)
-                ->where('owner_id', $request->owner_id)
-                ->update(
-                        [
-                            'discount' => 0.00,
-                            'coupon_code' => '',
-                            'coupon_applied' => 0
-                        ]
-        );
+            ->where('owner_id', $request->owner_id)
+            ->update(
+                [
+                    'discount' => 0.00,
+                    'coupon_code' => '',
+                    'coupon_applied' => 0
+                ]
+            );
 
         $coupon = Coupon::where('code', $request->code)->first();
         $carts = Cart::where('user_id', Auth::user()->id)
-                ->where('owner_id', $request->owner_id)
-                ->get();
+            ->where('owner_id', $request->owner_id)
+            ->get();
 //        dd($carts);
         $shipping_info = Address::where('id', $carts[0]['address_id'])->first();
 
@@ -497,25 +501,26 @@ class CheckoutController extends Controller
 //        return back();
     }
 
-    public function apply_club_point(Request $request) {
+    public function apply_club_point(Request $request)
+    {
         if (\App\Addon::where('unique_identifier', 'club_point')->first() != null &&
-                \App\Addon::where('unique_identifier', 'club_point')->first()->activated){
+            \App\Addon::where('unique_identifier', 'club_point')->first()->activated) {
 
             $point = $request->point;
 
 //            if(Auth::user()->club_point->points >= $point) {
-            if(Auth::user()->point_balance >= $point) {
+            if (Auth::user()->point_balance >= $point) {
                 $request->session()->put('club_point', $point);
                 flash(translate('Point has been redeemed'))->success();
-            }
-            else {
+            } else {
                 flash(translate('Invalid point!'))->warning();
             }
         }
         return back();
     }
 
-    public function remove_club_point(Request $request) {
+    public function remove_club_point(Request $request)
+    {
         $request->session()->forget('club_point');
         return back();
     }
@@ -525,8 +530,8 @@ class CheckoutController extends Controller
         $order = Order::findOrFail(Session::get('order_id'));
 
         Cart::where('owner_id', $order->seller_id)
-                ->where('user_id', $order->user_id)
-                ->delete();
+            ->where('user_id', $order->user_id)
+            ->delete();
 
         return view('frontend.order_confirmed', compact('order'));
     }

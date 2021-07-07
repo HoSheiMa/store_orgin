@@ -48,7 +48,7 @@
                 <form action="{{ route('payment.checkout') }}" class="form-default" role="form" method="POST" id="checkout-form">
                     @csrf
                     <input type="hidden" name="owner_id" value="{{ $carts[0]['owner_id'] }}">
-                    
+
                     <div class="card shadow-sm border-0 rounded">
                         <div class="card-header p-3">
                             <h3 class="fs-16 fw-600 mb-0">
@@ -59,6 +59,18 @@
                             <div class="row">
                                 <div class="col-xxl-8 col-xl-10 mx-auto">
                                     <div class="row gutters-10">
+                                            <div class="col-6 col-md-4">
+                                                <label class="aiz-megabox d-block mb-3">
+                                                    <input value="FAWATERAK" class="online_payment" type="radio" name="payment_option" checked>
+                                                    <span class="d-block p-3 aiz-megabox-elem">
+                                                        <img src="https://app.fawaterk.com/assets/media/logos/logo-letter-1.png" class="img-fluid mb-2">
+                                                        <span class="d-block text-center">
+                                                            <span class="d-block fw-600 fs-15">{{ translate('FAWATERAK')}}</span>
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            </div>
+
                                         @if(get_setting('paypal_payment') == 1)
                                             <div class="col-6 col-md-4">
                                                 <label class="aiz-megabox d-block mb-3">
@@ -442,10 +454,10 @@
                 $('#manual_payment_description').html($('#manual_payment_info_'+id).html());
             }
         }
-        
+
         $(document).on("click", "#coupon-apply",function() {
             var data = new FormData($('#apply-coupon-form')[0]);
-            
+
             $.ajax({
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -463,10 +475,10 @@
                 }
             })
         });
-        
+
         $(document).on("click", "#coupon-remove",function() {
             var data = new FormData($('#remove-coupon-form')[0]);
-            
+
             $.ajax({
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')

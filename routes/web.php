@@ -329,3 +329,6 @@ Route::get('/mobile-page/{slug}', 'PageController@mobile_custom_page')->name('mo
 
 //Custom page
 Route::get('/{slug}', 'PageController@show_custom_page')->name('custom-pages.show_custom_page');
+
+// fawaterk
+Route::get('/fawaterk/done', 'fawaterk@checkout_done');
